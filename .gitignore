@@ -1,0 +1,4 @@
+/example/data/
+/node_modules/
+*.log
+*~

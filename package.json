@@ -1,0 +1,42 @@
+{
+  "name": "statto-backend-fs",
+  "description": "A simple, slow and stupid statto backend for the filesystem.",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "dependencies": {
+    "async": "^0.9.0",
+    "date-slice": "^0.1.0",
+    "graceful-fs": "^3.0.6",
+    "mkdirp": "^0.5.0"
+  },
+  "devDependencies": {
+    "statto": "^0.3.0",
+    "statto-merge": "^0.1.0",
+    "statto-process": "^0.1.0",
+    "tape": "^3.5.0"
+  },
+  "homepage": "https://github.com/tynio/statto-backend-fs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tynio/statto-backend-fs"
+  },
+  "bugs": {
+    "url": "https://github.com/tynio/statto-backend-fs/issues"
+  },
+  "author": {
+    "name": "Andrew Chilton",
+    "email": "andychilton@gmail.com",
+    "url": "http://chilts.org/"
+  },
+  "license": "MIT",
+  "keywords": [
+    "statto",
+    "statsd",
+    "stats",
+    "statto-backend",
+    "fs"
+  ]
+}
