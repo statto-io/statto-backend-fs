@@ -12,7 +12,7 @@ var stattoBackendFs = require('../')
 // --------------------------------------------------------------------------------------------------------------------
 
 // create the backend first
-var backend = stattoBackendFs(path.join(__dirname, 'data'))
+var backend = stattoBackendFs(path.join(__dirname, 'store'))
 
 // if there are any errors in the backend, let's just log them
 backend.on('err', function(err) {
@@ -36,7 +36,6 @@ backend.setup(function(err) {
     console.log('--- %s ---', stats.ts)
     console.log(JSON.stringify(stats, null, '  '))
   })
-
 })
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,25 +1,31 @@
 // --------------------------------------------------------------------------------------------------------------------
 //
-// statto-backend-leveldb/index.js
+// statto-backend-fs/index.js
 // 
 // Copyright 2015 Tynio Ltd.
 //
 // --------------------------------------------------------------------------------------------------------------------
 
 // core
-var events = require('events')
 var path = require('path')
 var util = require('util')
-var crypto = require('crypto')
 
 // npm
 var fs = require('graceful-fs')
 var async = require('async')
 var mkdirp = require('mkdirp')
+var glob = require('glob')
 var stattoMerge = require('statto-merge')
 var stattoProcess = require('statto-process')
+var stattoBackend = require('statto-backend')
 
 // --------------------------------------------------------------------------------------------------------------------
+// module level
+
+function noop(){}
+
+// --------------------------------------------------------------------------------------------------------------------
+// constructor
 
 function StattoBackendFs(dir, opts) {
   if ( !dir ) {
@@ -28,29 +34,130 @@ function StattoBackendFs(dir, opts) {
 
   // default the opts to nothing
   this.dir      = dir
+  this.rawDir   = path.join(dir, 'raw')
+  this.statsDir = path.join(dir, 'stats')
   this.opts     = opts || {}
 }
 
-util.inherits(StattoBackendFs, events.EventEmitter);
+util.inherits(StattoBackendFs, stattoBackend.StattoBackendAbstract)
+
+// --------------------------------------------------------------------------------------------------------------------
+// methods
 
 StattoBackendFs.prototype.setup = function setup(callback) {
   var self = this
 
   // make sure this directory exists
-  mkdirp(self.dir, callback)
+  async.each(
+    [ self.dir, self.rawDir, self.statsDir ],
+    function(dir, done) {
+      console.log('dir=' + dir)
+      mkdirp(dir, done)
+    },
+    callback
+  )
 }
 
-StattoBackendFs.prototype.stats = function stats(stats) {
+StattoBackendFs.prototype.addRaw = function addRaw(raw, callback) {
   var self = this
+  callback = callback || noop
 
   // create a unique filename, use the hash of the contents
-  var str = JSON.stringify(stats)
-  var hash = crypto.createHash('sha1').update(str).digest('hex')
+  var hash = self._getHash(raw)
 
   // save these stats to the file system
-  var filename = path.join(self.dir, stats.ts + '-' + hash + '.json')
+  var filename = path.join(self.rawDir, raw.ts + '-' + hash + '.json')
+  fs.writeFile(filename, JSON.stringify(raw), function(err) {
+    if (err) {
+      self.emit('err', err)
+      return callback(err)
+    }
+    self.emit('stored')
+    callback()
+  })
+}
+
+StattoBackendFs.prototype.getRaws = function getRaws(date, callback) {
+  var self = this
+  callback = callback || noop
+
+  date = self._datify(date)
+  if ( !date ) {
+    return process.nextTick(function() {
+      callback(new Error('Unknown date type : ' + typeof date))
+    })
+  }
+  var ts = date.toISOString()
+
+  // get all of these raws from the filesystem
+  glob(path.join(self.rawDir, ts + '-*.json'), function(err, files) {
+    if (err) return callback(err)
+
+    var raws = []
+    async.eachSeries(
+      files,
+      function(filename, done) {
+        if (err) return callback(err)
+        fs.readFile(filename, 'utf8', function(err, data) {
+          if (err) return done(err)
+          try {
+            raws.push(JSON.parse(data))
+          }
+          catch (err) {
+            return callback(err)
+          }
+          done()
+        })
+      },
+      function(err) {
+        if (err) return callback(err)
+        callback(null, raws)
+      }
+    )
+  })
+}
+
+StattoBackendFs.prototype.setStats = function setStats(stats, callback) {
+  var self = this
+  callback = callback || noop
+
+  var ts = stats.ts
+
+  // save these stats to the file system
+  var filename = path.join(self.statsDir, stats.ts + '.json')
   fs.writeFile(filename, JSON.stringify(stats), function(err) {
-    if (err) return self.emit('err', err)
+    if (err) {
+      self.emit('err', err)
+      return callback(err)
+    }
+    self.emit('stored')
+    callback()
+  })
+}
+
+StattoBackendFs.prototype.getStats = function getStats(date, callback) {
+  var self = this
+  callback = callback || noop
+
+  date = self._datify(date)
+  if ( !date ) {
+    return process.nextTick(function() {
+      callback(new Error('Unknown date type : ' + typeof date))
+    })
+  }
+  var ts = date.toISOString()
+
+  var filename = path.join(self.statsDir, ts + '.json')
+  fs.readFile(filename, 'utf8', function(err, data) {
+    if (err) return callback(err)
+    var stats
+    try {
+      stats = JSON.parse(data)
+    }
+    catch (err) {
+      return callback(err)
+    }
+    callback(null, stats)
   })
 }
 
