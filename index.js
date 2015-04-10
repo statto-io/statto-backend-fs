@@ -15,6 +15,7 @@ var fs = require('graceful-fs')
 var async = require('async')
 var mkdirp = require('mkdirp')
 var glob = require('glob')
+var through = require('through')
 var stattoMerge = require('statto-merge')
 var stattoProcess = require('statto-process')
 var stattoBackend = require('statto-backend')
@@ -159,6 +160,68 @@ StattoBackendFs.prototype.getStats = function getStats(date, callback) {
     }
     callback(null, stats)
   })
+}
+
+StattoBackendFs.prototype.createStatsReadStream = function createStatsReadStream(from, to, callback) {
+  // * from - greater than or equal to (always included)
+  // * to - less than (therefore never included)
+  var self = this
+
+  from = self._datify(from)
+  to   = self._datify(to)
+  // if ( !from ) {
+  //   return process.nextTick(function() {
+  //     callback(new Error("Unknown 'from' type : " + typeof from))
+  //   })
+  // }
+  // if ( !to ) {
+  //   return process.nextTick(function() {
+  //     callback(new Error("Unknown 'to' type : " + typeof to))
+  //   })
+  // }
+  var ts1 = from.toISOString()
+  var ts2 = to.toISOString()
+
+  // let's loop through all the filenames, then load them up if it fits this range
+  var stream = through()
+  var filesToLoad = []
+
+  // get all of the filenames from the filesystem
+  glob(path.join(self.statsDir, '*.json'), function(err, filenames) {
+    filenames = filenames.sort()
+    var basename
+    for (var i = 0; i < filenames.length; i++) {
+      basename = path.basename(filenames[i], '.json')
+      if ( basename >= ts1 && basename < ts2 ) {
+        filesToLoad.push(filenames[i])
+      }
+    }
+
+    async.eachSeries(
+      filesToLoad,
+      function(filename, done) {
+        fs.readFile(filename, 'utf8', function(err, data) {
+          if (err) return done(err)
+          var stats
+          try {
+            stats = JSON.parse(data)
+          }
+          catch (err) {
+            return done(err)
+          }
+          stream.queue(stats)
+          done()
+        })
+      },
+      function(err) {
+        if (err) return stream.emit('error', err)
+        stream.emit('end')
+        stream.emit('close')
+      }
+    )
+  })
+
+  return stream
 }
 
 // ToDo:
