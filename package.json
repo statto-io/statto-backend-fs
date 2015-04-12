@@ -1,7 +1,7 @@
 {
   "name": "statto-backend-fs",
   "description": "A simple, slow and stupid statto backend for the filesystem.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": "index.js",
   "scripts": {
     "test": "tape test/*.js"
