@@ -12,7 +12,7 @@
     "glob": "^5.0.3",
     "graceful-fs": "^3.0.6",
     "mkdirp": "^0.5.0",
-    "statto-backend": "*",
+    "statto-backend": "^0.3.0",
     "through": "^2.3.7"
   },
   "devDependencies": {
